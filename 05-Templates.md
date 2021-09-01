@@ -1,0 +1,382 @@
+# Ansible Templating
+
+Ansible uses Jinja2 Templating in order to execute 
+
+- `if/ else statements`
+- `for loops`
+- `break and continue`
+- `ranges`
+- `filters`
+
+### `Using IF / ELSE`
+
+```yaml
+# playbook.yaml
+---
+-
+  hosts: all
+  tasks:
+    - name: Ansible Jinja2 if
+      debug:
+        msg: >
+             --== Ansible Jinja2 if statement ==--
+
+             {% if ansible_hostname == "ubuntu-c" -%}
+                  This is ubuntu-c
+             {% elif ansible_hostname == "centos1" -%}
+                  This is centos1 if it's modified SSH Port
+             {% else -%}
+                  This is good ols {{ ansible_hostname }}
+             {% endif %}
+...
+
+```
+
+```yaml
+# playbook.yaml
+---
+-
+  hosts: all
+  tasks:
+    - name: Ansible Jinja2 if variable is defined ( where variable is not defined )
+      debug:
+        msg: >
+             --== Ansible Jinja2 if variable is defined ( where variable is not defined ) ==--
+            
+             {% if example_variable is defined -%}
+                example_variable is defined
+             {% else -%}
+                example_variable is not defined
+             {% endif %}
+
+    - name: Ansible Jinja2 if variable is defined ( where variable is defined )
+      debug:
+        msg: >
+             --== Ansible Jinja2 if variable is defined ( where variable is defined ) ==--
+
+             {% set example_variable = 'defined' -%}
+             {% if example_variable is defined -%}
+                example_variable is defined
+             {% else -%}
+                example_variable is not defined
+             {% endif %}
+...
+
+```
+
+### `Using For Loops`
+
+```yaml
+---
+-
+  hosts: all
+  tasks:
+    - name: Ansible Jinja2 for statement
+      debug:
+        msg: >
+             --== Ansible Jinja2 for statement ==--
+             {# ansible_interfaces is a array #}
+             {% for entry in ansible_interfaces -%}
+                Interface entry {{ loop.index }} = {{ entry }}
+             {% endfor %}
+...
+```
+
+### `Using Ranges`
+```yaml
+---
+-
+  hosts: all
+  tasks:
+    - name: Ansible Jinja2 for range
+      debug:
+        msg: >
+             --== Ansible Jinja2 for range
+             {# Loops from 1 to 10 #}
+             {% for entry in range(1, 11) -%}
+                {{ entry }}
+             {% endfor %}
+...
+```
+
+### `Using For Loops Control (Break / Continue)`
+
+In order to user for loops control it is necessary to include the jinja2 extension on `ansible.cfg`.
+
+```ini
+# ansible.cfg
+
+[defaults]
+inventory = hosts
+host_key_checking = False
+jinja2_extensions = jinja2.ext.loopcontrols
+```
+```yaml
+# playbook.yaml
+---
+-
+  hosts: all
+  tasks:
+    - name: Ansible Jinja2 for range, reversed (simulate while greater 5)
+      debug:
+        msg: >
+             --== Ansible Jinja2 for range, reversed (simulate while greater 5) ==--
+
+             {# For Loop in Reverse  #}
+             {% for entry in range(10, 0, -1) -%}
+             {# Check if is Odd  #}
+                {% if entry is odd -%}
+                   {% continue %}
+                {% endif -%}
+                {% if entry == 5 -%}
+                   {% break %}
+                {% endif -%}
+                {{ entry }}
+             {% endfor %}
+...
+```
+
+### `Using Filters`
+
+Jinja Filter allows to manipulate values
+
+```yaml
+---
+-
+  hosts: all
+  tasks:
+    - name: Ansible Jinja2 filters
+      debug:
+        msg: >
+             ---=== Ansible Jinja2 filters ===---
+
+             --== min [1, 2, 3, 4, 5] ==--
+
+             {{ [1, 2, 3, 4, 5] | min }}
+
+             --== max [1, 2, 3, 4, 5] ==--
+
+             {{ [1, 2, 3, 4, 5] | max }}
+
+             --== unique [1, 1, 2, 2, 3, 3, 4, 4, 5, 5] ==--
+
+             {{ [1, 1, 2, 2, 3, 3, 4, 4, 5, 5] | unique }}
+
+             --== difference [1, 2, 3, 4, 5] vs [2, 3, 4] ==--
+
+             {{ [1, 2, 3, 4, 5] | difference([2, 3, 4]) }}
+
+             --== random ['rod', 'jane', 'freddy'] ==--
+
+             {{ ['rod', 'jane', 'freddy'] | random }}
+
+             --== urlsplit hostname ==--
+
+             {{ "http://docs.ansible.com/ansible/latest/playbooks_filters.html" | urlsplit('hostname') }}
+...
+```
+
+### `Rendering Template Files`
+
+```yml
+# template.j2
+--== Ansible Jinja2 if statement ==--
+
+{# If the hostname is ubuntu-c, include a message -#}
+{% if ansible_hostname == "ubuntu-c" -%}
+      This is ubuntu-c
+{% endif %}
+
+--== Ansible Jinja2 if elif statement ==--
+
+{% if ansible_hostname == "ubuntu-c" -%}
+   This is ubuntu-c
+{% elif ansible_hostname == "centos1" -%}
+   This is centos1 with it's modified SSH Port
+{% endif %}
+
+--== Ansible Jinja2 if elif else statement ==--
+
+{% if ansible_hostname == "ubuntu-c" -%}
+   This is ubuntu-c
+{% elif ansible_hostname == "centos1" -%}
+   This is centos1 with it's modified SSH Port
+{% else -%}
+   This is good old {{ ansible_hostname }}
+{% endif %}
+
+--== Ansible Jinja2 if variable is defined ( where variable is not defined ) ==--
+
+{% if example_variable is defined -%}
+   example_variable is defined
+{% else -%}
+   example_variable is not defined
+{% endif %}
+
+--== Ansible Jinja2 if varible is defined ( where variable is defined ) ==--
+
+{% set example_variable = 'defined' -%}
+{% if example_variable is defined -%}
+   example_variable is defined
+{% else -%}
+   example_variable is not defined
+{% endif %}
+
+--== Ansible Jinja2 for statement ==--
+
+{% for entry in ansible_all_ipv4_addresses -%}
+   IP Address entry {{ loop.index }} = {{ entry }}
+{% endfor %}
+
+--== Ansible Jinja2 for range
+
+{% for entry in range(1, 11) -%}
+   {{ entry }}
+{% endfor %}
+
+--== Ansible Jinja2 for range, reversed (simulate while greater 5) ==--
+
+{% for entry in range(10, 0, -1) -%}
+   {% if entry == 5 -%}
+      {% break %}
+   {% endif -%}
+   {{ entry }}
+{% endfor %}
+
+--== Ansible Jinja2 for range, reversed (continue if odd) ==--
+
+{% for entry in range(10, 0, -1) -%}
+   {% if entry is odd -%}
+      {% continue %}
+   {% endif -%}
+   {{ entry }}
+{% endfor %}
+
+---=== Ansible Jinja2 filters ===---
+
+--== min [1, 2, 3, 4, 5] ==--
+
+{{ [1, 2, 3, 4, 5] | min }}
+
+--== max [1, 2, 3, 4, 5] ==--
+
+{{ [1, 2, 3, 4, 5] | max }}
+
+--== unique [1, 1, 2, 2, 3, 3, 4, 4, 5, 5] ==--
+
+{{ [1, 1, 2, 2, 3, 3, 4, 4, 5, 5] | unique }}
+
+--== difference [1, 2, 3, 4, 5] vs [2, 3, 4, 5, 6] ==--
+
+{{ [1, 2, 3, 4, 5] | difference([2, 3, 4]) }}
+
+--== random ['rod', 'jane', 'freddy'] ==--
+
+{{ ['rod', 'jane', 'freddy'] | random }}
+
+--== urlsplit hostname ==--
+
+{{ "http://docs.ansible.com/ansible/latest/playbooks_filters.html" | urlsplit('hostname') }}
+
+```
+
+```yaml
+# playbook.yml
+---
+-
+  hosts: all
+  tasks:
+    - name: Jinja2 template
+      template:
+        src: template.j2
+        dest: "/tmp/{{ ansible_hostname }}_template.out"
+        trim_blocks: true
+        mode: 0644
+...
+```
+
+```txt
+# tmp/ubuntu-c_template.out
+--== Ansible Jinja2 if statement ==--
+
+This is ubuntu-c
+
+--== Ansible Jinja2 if elif statement ==--
+
+This is ubuntu-c
+
+--== Ansible Jinja2 if elif else statement ==--
+
+This is ubuntu-c
+
+--== Ansible Jinja2 if variable is defined ( where variable is not defined ) ==--
+
+example_variable is not defined
+
+--== Ansible Jinja2 if varible is defined ( where variable is defined ) ==--
+
+example_variable is defined
+
+--== Ansible Jinja2 for statement ==--
+
+IP Address entry 1 = 172.18.0.8
+
+--== Ansible Jinja2 for range
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+
+--== Ansible Jinja2 for range, reversed (simulate while greater 5) ==--
+
+10
+9
+8
+7
+6
+
+--== Ansible Jinja2 for range, reversed (continue if odd) ==--
+
+10
+8
+6
+4
+2
+
+---=== Ansible Jinja2 filters ===---
+
+--== min [1, 2, 3, 4, 5] ==--
+
+1
+
+--== max [1, 2, 3, 4, 5] ==--
+
+5
+
+--== unique [1, 1, 2, 2, 3, 3, 4, 4, 5, 5] ==--
+
+[1, 2, 3, 4, 5]
+
+--== difference [1, 2, 3, 4, 5] vs [2, 3, 4, 5, 6] ==--
+
+[1, 5]
+
+--== random ['rod', 'jane', 'freddy'] ==--
+
+jane
+
+--== urlsplit hostname ==--
+
+```
+
+## References
+---
+
+- [`Ansible Filter`](https://docs.ansible.com/ansible/latest/user_guide/playbooks_filters.html)

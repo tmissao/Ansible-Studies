@@ -1,0 +1,45 @@
+---
+-
+  hosts: linux
+  vars_files:
+    - vars/logos.yaml
+  tasks:
+    - name: Install Epel
+      dnf:
+        name: epel-release
+        state: latest
+        update_cache: true
+      when: ansible_distribution == "CentOS"
+
+    - name: Install Packages
+      package:
+        name:
+          - nginx
+          - unzip
+        state: latest
+
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+      notify: Check HTTP Service
+
+    - name: Unarchive Playbook stacker game
+      unarchive:
+        src: files/playbook_stacker.zip
+        dest: "{{ nginx_root_location }}"
+        mode: 0755
+
+    - name: Template index.html-easter_egg.j2 to index.html on target
+      template:
+        src: templates/index.html-easter_egg.j2
+        dest: "{{ nginx_root_location }}/index.html"
+        mode: 0644
+
+  handlers:
+    - name: Check HTTP Service
+      uri: 
+        url: http://{{ansible_default_ipv4.address}}
+        status_code: 200
+
+...
